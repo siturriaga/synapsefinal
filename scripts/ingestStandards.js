@@ -1,12 +1,14 @@
 // scripts/ingestStandards.js
-// Run this script locally: node scripts/ingestStandards.js
+// This script now reads ALL JSON files in the directory and uploads them.
 
 const admin = require('firebase-admin');
 const fs = require('fs');
+const path = require('path');
 
-// IMPORTANT: Replace this path with your service account key file
+// 🚨 CRITICAL: Set the directory where your JSON files are located
+const STANDARDS_DIR = __dirname; 
+// 🚨 CRITICAL: Replace this path with your service account key file
 const serviceAccount = require('/path/to/your/firebase-adminsdk-key.json'); 
-const standardsFilePath = './standards_data.json'; // ASSUME your standards JSON is here
 
 // Initialize Admin SDK
 admin.initializeApp({
@@ -16,48 +18,64 @@ admin.initializeApp({
 const db = admin.firestore();
 
 /**
- * Uploads standards data from a local JSON file to Firestore.
+ * Loads all standards data from multiple JSON files and uploads them to Firestore.
  */
-async function ingestStandards() {
+async function ingestAllStandards() {
     console.log("Starting standards ingestion...");
 
-    try {
-        const rawData = fs.readFileSync(standardsFilePath, 'utf8');
-        const standards = JSON.parse(rawData);
+    // 1. Get all JSON files in the current directory (scripts/)
+    const files = fs.readdirSync(STANDARDS_DIR).filter(file => file.endsWith('.json'));
+    let totalCount = 0;
+    
+    if (files.length === 0) {
+        console.error("❌ No JSON standards files found in the directory.");
+        return;
+    }
 
-        if (!Array.isArray(standards) || standards.length === 0) {
-            throw new Error("Standards file is empty or not a valid JSON array.");
-        }
+    const batch = db.batch();
+    const collectionRef = db.collection('standards');
 
-        const batch = db.batch();
-        const collectionRef = db.collection('standards');
-        let count = 0;
+    for (const file of files) {
+        const filePath = path.join(STANDARDS_DIR, file);
+        
+        try {
+            const rawData = fs.readFileSync(filePath, 'utf8');
+            const standardsArray = JSON.parse(rawData);
 
-        for (const item of standards) {
-            // Data Structure Validation (Ensures congruence with the data model)
-            if (!item.id || !item.description || !item.subject || !item.grade) {
-                console.warn(`Skipping malformed standard: ${JSON.stringify(item)}`);
+            if (!Array.isArray(standardsArray)) {
+                console.warn(`Skipping file ${file}: Content is not a valid JSON array.`);
                 continue;
             }
 
-            // Set the document ID using the standard ID (e.g., RL.7.1) for easy lookup
-            const docRef = collectionRef.doc(item.id); 
-            
-            batch.set(docRef, {
-                description: item.description,
-                subject: item.subject,
-                grade: item.grade
-            });
-            count++;
+            for (const item of standardsArray) {
+                // Ensure data congruence with the required model: id, description, subject, grade
+                if (!item.id || !item.description || !item.subject || !item.grade) {
+                    console.warn(`Skipping malformed standard in ${file}: Missing key fields.`);
+                    continue;
+                }
+
+                const docRef = collectionRef.doc(item.id); 
+                
+                batch.set(docRef, {
+                    description: item.description,
+                    subject: item.subject,
+                    grade: item.grade
+                });
+                totalCount++;
+            }
+            console.log(`[${file}] successfully added ${standardsArray.length} items to the batch.`);
+
+        } catch (error) {
+            console.error(`❌ Failed to process file ${file}: ${error.message}`);
         }
+    }
 
+    if (totalCount > 0) {
         await batch.commit();
-        console.log(`✅ Successfully ingested ${count} standards into Firestore.`);
-
-    } catch (error) {
-        console.error("❌ Standards ingestion failed:", error.message);
-        console.error("Please check your JSON file path and format.");
+        console.log(`\n✅ INGESTION COMPLETE: Total ${totalCount} standards committed to Firestore.`);
+    } else {
+        console.log("⚠️ No valid standards found to commit.");
     }
 }
 
-ingestStandards();
+ingestAllStandards();
