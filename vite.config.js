@@ -5,16 +5,15 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  // 🚨 NEW CONFIG: Tell Vite to look in the root folder for index.html
-  root: '.',
+  // 🚨 FIX: Root set to '.' since index.html was moved to root
+  root: '.', 
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
   build: {
-    // Assets that were in 'public' (like vite.svg) now need to be explicitly managed
-    // by ensuring Vite knows the base path correctly.
+    // Assets that were in 'public' are now relative to the root
     publicDir: 'public', 
   }
 });
