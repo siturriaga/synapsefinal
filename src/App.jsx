@@ -1,9 +1,9 @@
 // src/App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-// 🚨 FIX: Correctly import QueryClient and QueryClientProvider from TanStack Query
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; 
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+// 🚨 FIX: useAuth MUST be destructured from AuthContext for ReferenceError fix
+import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 import { useSynapseData } from './hooks/useSynapseData'; 
 
 // Page Imports
@@ -14,7 +14,7 @@ import AssignmentsPage from './pages/AssignmentsPage';
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth(); // Now correctly defined
   const { loading: dataLoading } = useSynapseData();
 
   if (authLoading || dataLoading) return <div id="loading-overlay">Initializing Synapse Co-Pilot...</div>;
