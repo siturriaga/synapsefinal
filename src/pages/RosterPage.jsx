@@ -1,83 +1,31 @@
-// src/components/RosterTable.jsx
+// src/pages/RosterPage.jsx
 import React from 'react';
+import { RosterTable } from '@/components/RosterTable'; 
 import { useSynapseData } from '@/hooks/useSynapseData';
-import { useAuth } from '@/contexts/AuthContext'; 
+import { groupStudentsHeterogeneously } from '@/utils/groupingAlgorithm';
 
-export function RosterTable() {
-    const { students, loading } = useSynapseData();
-    const { user } = useAuth();
+function RosterPage() { 
+    const { students } = useSynapseData();
 
-    const handleUpdate = async (studentId, field, value) => {
-        if (!user || !value) return;
-        
-        try {
-            const token = await user.getIdToken();
-            
-            const response = await fetch('/api/roster/student', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`, 
-                },
-                body: JSON.stringify({ studentId, field, value }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update student field. Status: ' + response.status);
-            }
-            console.log(`${field} updated successfully for ${studentId}.`);
-
-        } catch (error) {
-            console.error('Error updating roster:', error);
-            alert('Error updating student data. Check console.');
-        }
+    const handleGenerateGroups = () => {
+        const groups = groupStudentsHeterogeneously(students);
+        console.log("Generated Heterogeneous Groups:", groups);
+        alert(`Successfully generated ${groups.length} balanced groups!`);
     };
 
-    if (loading) return <div className="p-4 text-center">Loading student data...</div>;
-    
-    // Grouping logic (simplified for display)
-    const studentsByPeriod = students.reduce((acc, s) => {
-        const key = s.period; 
-        acc[key] = acc[key] || [];
-        acc[key].push(s);
-        return acc;
-    }, {});
-
     return (
-        <div style={{ border: '1px solid black', padding: '10px' }}>
-            {Object.entries(studentsByPeriod).map(([period, studentList]) => (
-                <section key={period} style={{ marginBottom: '20px' }}>
-                    <h2 style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Period {period}</h2>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '2px solid gray' }}><th>Name</th><th>Period</th><th>Quarter</th><th>Mastery</th></tr>
-                        </thead>
-                        <tbody>
-                            {studentList.map(s => {
-                                const avgMastery = s.masteryByStandard ? 'Calculated%' : "N/A"; 
-
-                                return (
-                                    <tr key={s.id}>
-                                        <td>{s.name}</td>
-                                        <td>
-                                            <input 
-                                                type="text" 
-                                                defaultValue={s.period} 
-                                                onBlur={(e) => handleUpdate(s.id, 'period', e.target.value)} 
-                                                style={{ border: '1px solid #ccc', width: '50px' }} 
-                                                // 🚨 ACCESSIBILITY FIX: Added aria-label
-                                                aria-label={`Edit Period for ${s.name}`}
-                                            />
-                                        </td>
-                                        <td>{s.quarter}</td>
-                                        <td>{avgMastery}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </section>
-            ))}
+        <div className="p-8">
+            <h1 className="text-3xl font-bold mb-6">Class Roster & Management</h1>
+            <div className="flex justify-between mb-6">
+                <button className="btn btn-primary">+ Upload Roster</button>
+                <button onClick={handleGenerateGroups} className="btn btn-secondary">
+                    Generate Heterogeneous Groups
+                </button>
+            </div>
+            <RosterTable />
         </div>
     );
 }
+
+// 🚨 CRITICAL FIX: Export as default to match import in App.jsx
+export default RosterPage;
