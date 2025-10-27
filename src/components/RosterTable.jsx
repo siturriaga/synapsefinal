@@ -1,34 +1,25 @@
 // src/components/RosterTable.jsx
 import React from 'react';
 import { useSynapseData } from '@/hooks/useSynapseData';
-import { useAuth } from '@/contexts/AuthContext'; 
+import { useAuth } from '@/contexts/AuthContext';
+import { secureFetch } from '@/utils/apiService'; // <-- NEW IMPORT
 
 export function RosterTable() {
     const { students, loading } = useSynapseData();
-    const { user } = useAuth(); // Needed to get the secure token
+    const { user } = useAuth();
 
-    // 🚨 FINAL FUNCTIONALITY FIX: Securely updates Firestore via Cloud Function
     const handleUpdate = async (studentId, field, value) => {
         if (!user || !value) return;
         
         try {
-            const token = await user.getIdToken();
-            
-            const response = await fetch('/api/roster/student', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`, 
-                },
-                body: JSON.stringify({ studentId, field, value }),
-            });
-
-            if (!response.ok) {
-                // Check if 401 (Unauthorized) or 500 (Server Error)
-                throw new Error('Failed to update student field. Status: ' + response.status);
-            }
+            // 🚨 FUNCTIONAL UPDATE: Use secureFetch for authenticated PUT request
+            await secureFetch(
+                'roster/student', 
+                'PUT', 
+                { studentId, field, value }, 
+                user
+            );
             console.log(`${field} updated successfully for ${studentId}.`);
-            // The UI updates automatically via the real-time listener
 
         } catch (error) {
             console.error('Error updating roster:', error);
@@ -38,6 +29,7 @@ export function RosterTable() {
 
     if (loading) return <div className="p-4 text-center">Loading student data...</div>;
     
+    // Grouping logic (simplified for display)
     const studentsByPeriod = students.reduce((acc, s) => {
         const key = s.period; 
         acc[key] = acc[key] || [];
@@ -45,7 +37,6 @@ export function RosterTable() {
         return acc;
     }, {});
 
-    // Note: Styles are minimal here to ensure functionality is the focus.
     return (
         <div style={{ border: '1px solid black', padding: '10px' }}>
             {Object.entries(studentsByPeriod).map(([period, studentList]) => (
@@ -63,8 +54,13 @@ export function RosterTable() {
                                     <tr key={s.id}>
                                         <td>{s.name}</td>
                                         <td>
-                                            {/* Calls API on blur */}
-                                            <input type="text" defaultValue={s.period} onBlur={(e) => handleUpdate(s.id, 'period', e.target.value)} style={{ border: '1px solid #ccc', width: '50px' }}/>
+                                            <input 
+                                                type="text" 
+                                                defaultValue={s.period} 
+                                                onBlur={(e) => handleUpdate(s.id, 'period', e.target.value)} 
+                                                style={{ border: '1px solid #ccc', width: '50px' }} 
+                                                aria-label={`Edit Period for ${s.name}`}
+                                            />
                                         </td>
                                         <td>{s.quarter}</td>
                                         <td>{avgMastery}</td>
