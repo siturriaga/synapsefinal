@@ -1,49 +1,64 @@
 // src/components/AssignmentGenerator.jsx
 import React, { useState } from 'react';
-// import { api } from '@/utils/api'; // Assumed utility for API calls
+import { useAuth } from '@/contexts/AuthContext';
 
 export function AssignmentGenerator({ standards }) {
+    const { user } = useAuth();
     const [form, setForm] = useState({ difficulty: 'On Level', type: 'Quiz', count: 10 });
     const [result, setResult] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
+    // 🚨 FINAL FUNCTIONALITY FIX: Securely calls the Gemini Cloud Function
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!user || standards.length === 0) return alert("Please select standards and ensure you are logged in.");
+        
+        setIsGenerating(true);
+        setResult(null);
+
         try {
-            // Call the functions/api/generateAssignment endpoint
-            console.log("API Call: Generating Assignment...");
-            // const response = await api.post('/ai/generateAssignment', { ...form, standards });
-            // setResult(response.data);
+            const token = await user.getIdToken();
             
-            // Mock result for UI demo:
-            setResult({ title: "New Assignment", items: [{ id: 1, content: "What is X?" }], story_text: "N/A" });
+            const response = await fetch('/api/ai/generateAssignment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`, // Secure access
+                },
+                body: JSON.stringify({ ...form, standards }),
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok || data.title?.includes('N/A')) {
+                 // Check for explicit error from server
+                 throw new Error(data.error || 'Server returned structured N/A error.');
+            }
+            
+            setResult(data);
+
         } catch (error) {
-            setResult({ title: "Generation Failed: N/A", items: [{ id: 0, content: "Critical Error: N/A" }], story_text: "N/A" });
+            console.error('AI Generation Failed:', error);
+            setResult({ title: "Generation Failed: N/A", items: [{ id: 0, content: "Network or Server Error: N/A" }], story_text: "N/A" });
+            alert("AI Generation Failed. See console for network status.");
+        } finally {
+            setIsGenerating(false);
         }
     };
 
     return (
-        <div className="space-y-6">
-            <form onSubmit={handleSubmit} className="p-6 bg-white shadow rounded-lg">
+        <div style={{ border: '1px solid #ccc', padding: '15px' }}>
+            <form onSubmit={handleSubmit}>
                 <p>Targeting Standards: {standards.join(', ') || 'None Selected'}</p>
-                
-                {/* 🚨 FIX IS HERE: The button tag must be closed properly */}
-                <button type="submit" className="btn btn-primary">
-                    Generate Differentiated Assignment
+                <button type="submit" disabled={isGenerating} style={{ padding: '8px 15px', background: '#333', color: 'white', border: 'none', cursor: 'pointer' }}>
+                    {isGenerating ? 'Generating...' : 'Generate Differentiated Assignment'}
                 </button>
-                
             </form>
             
             {result && (
-                <div className="p-6 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
-                    <h3 className="text-xl font-bold">{result.title}</h3>
-                    {result.story_text && result.story_text !== "N/A" && <p className="mt-2">{result.story_text}</p>}
-                    <ol className="list-decimal pl-5 mt-4">
-                        {result.items.map(item => (
-                            <li key={item.id} className={item.content === "N/A" ? 'text-red-600' : ''}>
-                                {item.content}
-                            </li>
-                        ))}
-                    </ol>
+                <div style={{ marginTop: '20px', borderLeft: '3px solid blue', paddingLeft: '10px' }}>
+                    <h3>{result.title}</h3>
+                    <p>Status: Content Loaded. (Check Network Tab for API Success)</p>
                 </div>
             )}
         </div>
