@@ -1,12 +1,3 @@
-This is the final set of corrections to fix the build error and ensure the complete application is congruent. The issue is a file resolution failure, so we must be explicit with the file extension in all imports.
-
-Here is the full, updated code for your **`src/App.jsx`** file, which resolves the **`Could not load SettingsPage`** error.
-
------
-
-## Final Updated `src/App.jsx` Code
-
-```jsx
 // src/App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
@@ -14,11 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext'; 
 import { useSynapseData } from './hooks/useSynapseData'; 
 
-// Page Imports (CRITICAL FIX: Adding the .jsx extension to all page imports)
+// Page Imports
 import Dashboard from '@/pages/Dashboard.jsx'; 
 import RosterPage from '@/pages/RosterPage.jsx'; 
 import AssignmentsPage from '@/pages/AssignmentsPage.jsx';
-import SettingsPage from '@/pages/SettingsPage.jsx'; // 🚨 FINAL FIX HERE: Explicitly added .jsx
+import SettingsPage from '@/pages/SettingsPage.jsx'; 
 
 // Component Import 
 import { AppHeader } from '@/components/common/AppHeader.jsx'; 
@@ -102,4 +93,3 @@ export default function App() {
     </Router>
   );
 }
-```
