@@ -1,17 +1,18 @@
 # netlify.toml
+
 [build]
-  # 1. Base Directory Fix: Tells Netlify/Vite the project root is NOT the repo root.
-  # Vite uses 'index.html' as its entry point, and it looks for it based on the 'base' config.
-  # Since index.html is in 'public' (where Vite normally expects it), but we need to tell 
-  # Netlify that Vite's files are relative to the root, we set the build command explicitly.
-  
-  # Set the command to run the build process from the root, but ensure the publish directory is correct.
+  # Build command (runs vite build)
   command = "npm run build"
   
-  # Set the publish directory to the standard output directory created by Vite
+  # Directory where Vite outputs static files
   publish = "dist"
 
-# Add a redirect rule for Firebase Hosting compatibility (optional but recommended)
+# CRITICAL FIX: Overrides Netlify's default 'netlify/functions' directory.
+# This prevents Netlify from building its own functions, allowing the Firebase functions setup to work.
+[functions]
+  directory = "netlify-ignore"
+
+# Essential for Firebase/React routing (redirects all traffic to the single-page application)
 [[redirects]]
   from = "/*"
   to = "/index.html"
