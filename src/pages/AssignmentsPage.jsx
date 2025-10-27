@@ -1,39 +1,58 @@
-// src/pages/AssignmentsPage.jsx
+// src/pages/SettingsPage.jsx
 import React, { useState } from 'react';
-import { AssignmentGenerator } from '@/components/AssignmentGenerator';
-import { useStandards } from '@/hooks/useStandards'; // <-- NEW HOOK IMPORT
+import { useSynapseData } from '@/hooks/useSynapseData';
 
-export default function AssignmentsPage() {
-    const { standards, loading: standardsLoading } = useStandards();
-    
-    // State to hold the standards the user selects from the list
-    const [selectedStandards, setSelectedStandards] = useState([]); 
-    
-    // Automatically select a few standards once loaded for a default view
-    useEffect(() => {
-        if (!standardsLoading && standards.length > 0 && selectedStandards.length === 0) {
-            // Select the first 3 standards by default
-            setSelectedStandards(standards.slice(0, 3).map(s => s.id));
-        }
-    }, [standards, standardsLoading, selectedStandards.length]);
+const SUBJECT_OPTIONS = ['ELA', 'Math', 'Science', 'History'];
+const GRADE_OPTIONS = ['6', '7', '8', '9', '10', '11', '12', 'K-12'];
 
-    if (standardsLoading) {
-        return <div className="p-8 text-xl">Loading standards library...</div>;
-    }
+export default function SettingsPage() {
+    const { profile, updateProfileSetting } = useSynapseData();
+    const [status, setStatus] = useState('');
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        updateProfileSetting(name, value);
+        setStatus(`Updated ${name} to ${value}!`);
+        setTimeout(() => setStatus(''), 2000);
+    };
 
     return (
         <div className="p-8">
-            <h1 className="text-3xl font-bold mb-6">AI Assignment Engine</h1>
+            <h1 className="text-3xl font-bold mb-6">Teacher Profile & Settings</h1>
             
-            <div className="mb-4">
-                <h2 className="text-xl font-semibold">Standards Selection ({standards.length} available)</h2>
-                {/* TODO: Implement a UI (e.g., checkboxes) here to allow the teacher
-                  to change the selection and update the selectedStandards state.
-                */}
-                <p className="text-sm mt-2">Currently Targeting: **{selectedStandards.join(', ') || 'N/A - Select standards'}**</p>
-            </div>
+            <div className="space-y-4 max-w-md bg-white p-6 rounded shadow">
+                <p className="text-sm text-green-600">{status}</p>
 
-            <AssignmentGenerator standards={selectedStandards} />
+                {/* Subject Selection UI */}
+                <div>
+                    <label className="block text-sm font-medium mb-1">Teaching Subject:</label>
+                    <select 
+                        name="subject"
+                        value={profile.subject || 'General'}
+                        onChange={handleChange}
+                        className="w-full p-2 border rounded"
+                    >
+                        <option value="General" disabled>Select Subject</option>
+                        {SUBJECT_OPTIONS.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                    </select>
+                </div>
+
+                {/* Grade Selection UI */}
+                <div>
+                    <label className="block text-sm font-medium mb-1">Grade Level:</label>
+                    <select 
+                        name="grade"
+                        value={profile.grade || 'K-12'}
+                        onChange={handleChange}
+                        className="w-full p-2 border rounded"
+                    >
+                        <option value="K-12" disabled>Select Grade</option>
+                        {GRADE_OPTIONS.map(grade => <option key={grade} value={grade}>{grade}</option>)}
+                    </select>
+                </div>
+            </div>
+            
+            <p className="mt-6 text-gray-600">Standards are filtered based on these selections.</p>
         </div>
     );
 }
