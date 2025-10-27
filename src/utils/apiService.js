@@ -1,12 +1,11 @@
 // src/utils/apiService.js
 
-// 🚨 CRITICAL FIX: Base URL must be defined. 
-// REPLACE [YOUR-FIREBASE-PROJECT-ID] with your actual Firebase Project ID.
-const API_BASE_URL = "https://us-central1-[YOUR-FIREBASE-PROJECT-ID].cloudfunctions.net/api";
+// 🚨 FINAL FIX: The project ID 'trackopmn' is now injected into the base URL.
+const API_BASE_URL = "https://us-central1-trackopmn.cloudfunctions.net/api";
 
 /**
  * Executes a secure, authenticated request to a backend API endpoint.
- * This function abstracts the token and URL handling.
+ * This function handles the secure token and the full URL path.
  * @param {string} endpoint - The path after /api/ (e.g., 'roster/student')
  * @param {string} method - HTTP method ('GET', 'POST', 'PUT').
  * @param {Object} body - Request body object.
@@ -29,9 +28,11 @@ export async function secureFetch(endpoint, method = 'GET', body = null, user) {
     };
 
     const response = await fetch(url, options);
+    // Attempt to parse JSON, providing a fallback error object if parsing fails
     const data = await response.json().catch(() => ({ error: 'Could not parse JSON response.' }));
 
     if (!response.ok) {
+        // Throw server error message if response status is 4xx or 5xx
         throw new Error(data.error || `API Error: ${response.status} - Check function logs for details.`);
     }
 
