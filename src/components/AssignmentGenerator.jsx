@@ -1,6 +1,7 @@
 // src/components/AssignmentGenerator.jsx
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { secureFetch } from '@/utils/apiService'; // <-- NEW IMPORT
 
 export function AssignmentGenerator({ standards }) {
     const { user } = useAuth();
@@ -8,7 +9,6 @@ export function AssignmentGenerator({ standards }) {
     const [result, setResult] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
-    // 🚨 FINAL FUNCTIONALITY FIX: Securely calls the Gemini Cloud Function
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!user || standards.length === 0) return alert("Please select standards and ensure you are logged in.");
@@ -17,22 +17,16 @@ export function AssignmentGenerator({ standards }) {
         setResult(null);
 
         try {
-            const token = await user.getIdToken();
+            // 🚨 FUNCTIONAL UPDATE: Use secureFetch for authenticated POST request
+            const data = await secureFetch(
+                'ai/generateAssignment', 
+                'POST', 
+                { ...form, standards }, 
+                user
+            );
             
-            const response = await fetch('/api/ai/generateAssignment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`, // Secure access
-                },
-                body: JSON.stringify({ ...form, standards }),
-            });
-
-            const data = await response.json();
-            
-            if (!response.ok || data.title?.includes('N/A')) {
-                 // Check for explicit error from server
-                 throw new Error(data.error || 'Server returned structured N/A error.');
+            if (data.title?.includes('N/A')) {
+                 throw new Error('Server returned structured N/A error.');
             }
             
             setResult(data);
